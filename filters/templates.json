@@ -1,0 +1,18 @@
+{
+  "kim": {
+    "imap_server": "imap.gmail.com",
+    "imap_port": 993,
+    "use_ssl": true,
+    "folder": "INBOX",
+    "auth_mechanism": "LOGIN",
+    "email_address": "buitrongkim214@gmail.com",
+    "subject_keywords": "抽選結果",
+    "body_keywords": "",
+    "from_keywords": "",
+    "from_domains": "",
+    "keyword_operator": "AND",
+    "attachment_choice": "Bất kỳ",
+    "from_date": "2025-11-10",
+    "to_date": ""
+  }
+}

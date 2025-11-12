@@ -1,0 +1,107 @@
+2025-11-12 20:34:43,950 [INFO] imap_connector - Authenticating via XOAUTH2 for 
+2025-11-12 20:34:44,535 [ERROR] root - Lỗi khi lọc email: AUTHENTICATE command error: BAD [b'Invalid SASL argument. 41be03b00d2f7-bbef634efeemb69013051a12']
+Traceback (most recent call last):
+  File "C:\Users\tokuda\miniconda3\Lib\site-packages\imapclient\imapclient.py", line 424, in oauth2_login
+    return self._command_and_check("authenticate", mech, lambda x: auth_string)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tokuda\miniconda3\Lib\site-packages\imapclient\imapclient.py", line 1752, in _command_and_check
+    typ, data = meth(*args)
+                ~~~~^^^^^^^
+  File "C:\Users\tokuda\miniconda3\Lib\imaplib.py", line 451, in authenticate
+    typ, dat = self._simple_command('AUTHENTICATE', mech)
+               ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tokuda\miniconda3\Lib\imaplib.py", line 1239, in _simple_command
+    return self._command_complete(name, self._command(name, *args))
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tokuda\miniconda3\Lib\imaplib.py", line 1064, in _command_complete
+    raise self.error('%s command error: %s %s' % (name, typ, data))
+imaplib.IMAP4.error: AUTHENTICATE command error: BAD [b'Invalid SASL argument. 41be03b00d2f7-bbef634efeemb69013051a12']
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\MMO\PROJECT\gmail-filter\ui.py", line 350, in _perform_search
+    connector.login(connection_details["email_address"], connection_details["password"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\MMO\PROJECT\gmail-filter\imap_connector.py", line 55, in login
+    self._client.oauth2_login(username, secret)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tokuda\miniconda3\Lib\site-packages\imapclient\imapclient.py", line 426, in oauth2_login
+    raise exceptions.LoginError(str(e))
+imapclient.exceptions.LoginError: AUTHENTICATE command error: BAD [b'Invalid SASL argument. 41be03b00d2f7-bbef634efeemb69013051a12']
+2025-11-12 20:35:07,884 [INFO] imap_connector - Authenticating via LOGIN for buitrongkim214@gmail.com
+2025-11-12 20:35:08,842 [ERROR] root - Lỗi khi lọc email: b'[ALERT] Application-specific password required: https://support.google.com/accounts/answer/185833 (Failure)'
+Traceback (most recent call last):
+  File "C:\Users\tokuda\miniconda3\Lib\site-packages\imapclient\imapclient.py", line 395, in login
+    rv = self._command_and_check(
+        "login",
+    ...<2 lines>...
+        unpack=True,
+    )
+  File "C:\Users\tokuda\miniconda3\Lib\site-packages\imapclient\imapclient.py", line 1752, in _command_and_check
+    typ, data = meth(*args)
+                ~~~~^^^^^^^
+  File "C:\Users\tokuda\miniconda3\Lib\imaplib.py", line 621, in login
+    raise self.error(dat[-1])
+imaplib.IMAP4.error: b'[ALERT] Application-specific password required: https://support.google.com/accounts/answer/185833 (Failure)'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\MMO\PROJECT\gmail-filter\ui.py", line 350, in _perform_search
+    connector.login(connection_details["email_address"], connection_details["password"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\MMO\PROJECT\gmail-filter\imap_connector.py", line 58, in login
+    self._client.login(username, secret)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tokuda\miniconda3\Lib\site-packages\imapclient\imapclient.py", line 402, in login
+    raise exceptions.LoginError(str(e))
+imapclient.exceptions.LoginError: b'[ALERT] Application-specific password required: https://support.google.com/accounts/answer/185833 (Failure)'
+2025-11-12 20:36:50,655 [INFO] imap_connector - Authenticating via LOGIN for buitrongkim214@gmail.com
+2025-11-12 20:36:52,632 [ERROR] root - Lỗi khi lọc email: b'[AUTHENTICATIONFAILED] Invalid credentials (Failure)'
+Traceback (most recent call last):
+  File "C:\Users\tokuda\miniconda3\Lib\site-packages\imapclient\imapclient.py", line 395, in login
+    rv = self._command_and_check(
+        "login",
+    ...<2 lines>...
+        unpack=True,
+    )
+  File "C:\Users\tokuda\miniconda3\Lib\site-packages\imapclient\imapclient.py", line 1752, in _command_and_check
+    typ, data = meth(*args)
+                ~~~~^^^^^^^
+  File "C:\Users\tokuda\miniconda3\Lib\imaplib.py", line 621, in login
+    raise self.error(dat[-1])
+imaplib.IMAP4.error: b'[AUTHENTICATIONFAILED] Invalid credentials (Failure)'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "E:\MMO\PROJECT\gmail-filter\ui.py", line 350, in _perform_search
+    connector.login(connection_details["email_address"], connection_details["password"])
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "E:\MMO\PROJECT\gmail-filter\imap_connector.py", line 58, in login
+    self._client.login(username, secret)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\tokuda\miniconda3\Lib\site-packages\imapclient\imapclient.py", line 402, in login
+    raise exceptions.LoginError(str(e))
+imapclient.exceptions.LoginError: b'[AUTHENTICATIONFAILED] Invalid credentials (Failure)'
+2025-11-12 20:39:41,169 [INFO] imap_connector - Authenticating via LOGIN for buitrongkim214@gmail.com
+2025-11-12 20:39:42,880 [INFO] imap_connector - Search returned 8132 UIDs
+2025-11-12 20:44:46,922 [INFO] imap_connector - Authenticating via LOGIN for buitrongkim214@gmail.com
+2025-11-12 20:44:48,666 [INFO] imap_connector - Search returned 338 UIDs
+2025-11-12 20:45:46,164 [INFO] email_filter - Filtered down to 2 records after client-side checks
+2025-11-12 20:46:36,637 [INFO] imap_connector - Authenticating via LOGIN for buitrongkim214@gmail.com
+2025-11-12 20:46:39,169 [INFO] imap_connector - Search returned 338 UIDs
+2025-11-12 20:47:35,759 [INFO] email_filter - Filtered down to 2 records after client-side checks
+2025-11-12 20:50:41,049 [INFO] imap_connector - Authenticating via LOGIN for buitrongkim214@gmail.com
+2025-11-12 20:50:43,360 [INFO] imap_connector - Search returned 338 UIDs
+2025-11-12 20:51:36,771 [INFO] email_filter - Filtered down to 2 records after client-side checks
+2025-11-12 20:52:25,133 [INFO] imap_connector - Authenticating via LOGIN for buitrongkim214@gmail.com
+2025-11-12 20:52:26,788 [INFO] imap_connector - Search returned 369 UIDs
+2025-11-12 20:53:23,924 [INFO] email_filter - Filtered down to 32 records after client-side checks
+2025-11-12 20:56:52,728 [INFO] imap_connector - Authenticating via LOGIN for buitrongkim214@gmail.com
+2025-11-12 20:56:54,254 [INFO] imap_connector - Search returned 369 UIDs
+2025-11-12 20:57:51,463 [INFO] email_filter - Filtered down to 32 records after client-side checks
+2025-11-12 21:06:43,922 [INFO] imap_connector - Authenticating via LOGIN for buitrongkim214@gmail.com
+2025-11-12 21:06:45,631 [INFO] imap_connector - Search returned 369 UIDs
+2025-11-12 21:07:44,084 [INFO] email_filter - Filtered down to 32 records after client-side checks
