@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import logging
 import os
+import signal
+import sys
 from datetime import datetime
 from getpass import getpass
 from pathlib import Path
@@ -13,7 +15,7 @@ from typing import Dict, Iterable, Optional
 import pandas as pd
 from dotenv import load_dotenv
 
-from email_filter import EmailFilter, EmailFilterCriteria, collect_unique_recipients
+from email_filter import EmailFilter, EmailFilterCriteria, FilterCancelled, collect_unique_recipients
 from imap_connector import IMAPConnectionConfig, IMAPConnector
 
 APP_ROOT = Path(__file__).parent
@@ -389,6 +391,8 @@ def main() -> None:
 
     print("====================================")
     print(" IMAP Email Filter - CLI Interface ")
+    print("====================================")
+    print("   Nhấn Ctrl+C bất kỳ lúc nào để hủy")
     print("====================================\n")
 
     templates = load_templates()
@@ -405,11 +409,22 @@ def main() -> None:
         auth_mechanism=connection_data["auth_mechanism"],
     )
     connector = IMAPConnector(config)
+    filter_instance = None
+
+    def signal_handler(sig, frame):
+        """Handle Ctrl+C gracefully."""
+        print("\n\n⚠️  Đang hủy tiến trình...")
+        if filter_instance:
+            filter_instance.cancel()
+        sys.exit(0)
+
+    # Register signal handler for Ctrl+C
+    signal.signal(signal.SIGINT, signal_handler)
 
     try:
         print("\nĐang đăng nhập vào máy chủ IMAP...")
         connector.login(connection_data["email_address"], connection_data["password"])
-        print("Đăng nhập thành công.\nĐang tìm email...")
+        print("Đăng nhập thành công.\nĐang tìm email...\n")
 
         filter_instance = EmailFilter(connector)
         records = filter_instance.search(criteria)
@@ -438,6 +453,11 @@ def main() -> None:
                 "to_date": filter_state["to_date"],
             }
             maybe_save_template(template_snapshot)
+    except FilterCancelled as exc:
+        print(f"\n⚠️  {exc}")
+        print("Tiến trình đã bị hủy bởi người dùng.")
+    except KeyboardInterrupt:
+        print("\n\n⚠️  Đã hủy bởi người dùng (Ctrl+C)")
     except Exception as exc:  # noqa: BLE001
         logging.exception("Lỗi trong quá trình lọc email: %s", exc)
         print(f"Đã xảy ra lỗi: {exc}")

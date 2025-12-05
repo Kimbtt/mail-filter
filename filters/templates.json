@@ -14,5 +14,53 @@
     "attachment_choice": "Bất kỳ",
     "from_date": "2025-11-10",
     "to_date": ""
+  },
+  "kim2": {
+    "imap_server": "imap.gmail.com",
+    "imap_port": 993,
+    "use_ssl": true,
+    "folder": "INBOX",
+    "auth_mechanism": "LOGIN",
+    "email_address": "buitrongkim214@gmail.com",
+    "subject_keywords": "2023年11月26日",
+    "body_keywords": "",
+    "from_keywords": "",
+    "from_domains": "",
+    "keyword_operator": "AND",
+    "attachment_choice": "Bất kỳ",
+    "from_date": "2025-11-20",
+    "to_date": ""
+  },
+  "kim3": {
+    "imap_server": "imap.gmail.com",
+    "imap_port": 993,
+    "use_ssl": true,
+    "folder": "INBOX",
+    "auth_mechanism": "LOGIN",
+    "email_address": "buitrongkim214@gmail.com",
+    "subject_keywords": "新商品",
+    "body_keywords": "",
+    "from_keywords": "pokemon",
+    "from_domains": "",
+    "keyword_operator": "AND",
+    "attachment_choice": "Bất kỳ",
+    "from_date": "2025-11-20",
+    "to_date": ""
+  },
+  "当選": {
+    "imap_server": "imap.gmail.com",
+    "imap_port": 993,
+    "use_ssl": true,
+    "folder": "INBOX",
+    "auth_mechanism": "LOGIN",
+    "email_address": "buitrongkim214@gmail.com",
+    "subject_keywords": "当選",
+    "body_keywords": "",
+    "from_keywords": "",
+    "from_domains": "",
+    "keyword_operator": "AND",
+    "attachment_choice": "Bất kỳ",
+    "from_date": "2025-11-27",
+    "to_date": ""
   }
 }

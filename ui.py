@@ -14,7 +14,7 @@ from typing import List, Optional
 import pandas as pd
 from dotenv import load_dotenv
 
-from email_filter import EmailFilter, EmailFilterCriteria, EmailRecord, collect_unique_recipients
+from email_filter import EmailFilter, EmailFilterCriteria, EmailRecord, FilterCancelled, collect_unique_recipients
 from imap_connector import IMAPConnectionConfig, IMAPConnector
 from main import (  # reuse shared utilities from CLI implementation
     configure_logging,
@@ -45,6 +45,8 @@ class EmailFilterApp:
         self.filter_state: dict | None = None
         self.connector: Optional[IMAPConnector] = None
         self.search_thread: Optional[threading.Thread] = None
+        self.filter_instance: Optional[EmailFilter] = None
+        self.is_searching: bool = False
 
         self._init_variables()
         self._build_widgets()
@@ -82,6 +84,7 @@ class EmailFilterApp:
         self.delete_var = tk.BooleanVar(value=False)
 
         self.status_var = tk.StringVar()
+        self.progress_var = tk.StringVar(value="")
 
     def _build_widgets(self) -> None:
         container = ttk.Frame(self.root)
@@ -91,6 +94,7 @@ class EmailFilterApp:
         self._build_connection_frame(container)
         self._build_filter_frame(container)
         self._build_actions_frame(container)
+        self._build_progress_frame(container)
         self._build_results_frame(container)
         self._build_export_frame(container)
 
@@ -147,6 +151,10 @@ class EmailFilterApp:
         search_btn = ttk.Button(frame, text="Lọc email", command=self._on_search_clicked)
         search_btn.grid(row=3, column=3, padx=8, pady=8, sticky="e")
         self.search_button = search_btn
+        
+        cancel_btn = ttk.Button(frame, text="Hủy", command=self._on_cancel_clicked, state="disabled")
+        cancel_btn.grid(row=3, column=2, padx=8, pady=8, sticky="e")
+        self.cancel_button = cancel_btn
 
         frame.columnconfigure(1, weight=1)
         frame.columnconfigure(3, weight=1)
@@ -185,6 +193,17 @@ class EmailFilterApp:
 
         frame.columnconfigure(1, weight=1)
         frame.columnconfigure(3, weight=1)
+
+    def _build_progress_frame(self, parent: ttk.Frame) -> None:
+        """Build progress display frame."""
+        frame = ttk.LabelFrame(parent, text="Tiến độ")
+        frame.pack(fill=tk.X, pady=(0, 10))
+        
+        self.progress_label = ttk.Label(frame, textvariable=self.progress_var, anchor="w", foreground="blue")
+        self.progress_label.pack(fill=tk.X, padx=8, pady=6)
+        
+        self.progress_bar = ttk.Progressbar(frame, mode="determinate", maximum=100)
+        self.progress_bar.pack(fill=tk.X, padx=8, pady=(0, 8))
 
     def _build_actions_frame(self, parent: ttk.Frame) -> None:
         frame = ttk.LabelFrame(parent, text="Hành động tự động (tùy chọn)")
@@ -333,14 +352,25 @@ class EmailFilterApp:
             messagebox.showerror("Lỗi", "Port không hợp lệ.")
             return
 
+        self.is_searching = True
         self.search_button.configure(state="disabled")
+        self.cancel_button.configure(state="normal")
         self._set_status("Đang tìm email...")
+        self._set_progress("Đang kết nối...", 0)
         self.records = []
         self._clear_results_table()
 
         thread = threading.Thread(target=self._perform_search, daemon=True)
         self.search_thread = thread
         thread.start()
+    
+    def _on_cancel_clicked(self) -> None:
+        """Cancel the ongoing search operation."""
+        if self.filter_instance and self.is_searching:
+            self.filter_instance.cancel()
+            self._set_status("Đang hủy...")
+            self._set_progress("Đang hủy tiến trình...", 0)
+            self.cancel_button.configure(state="disabled")
 
     def _perform_search(self) -> None:
         connection_details = self._build_connection_details()
@@ -357,9 +387,21 @@ class EmailFilterApp:
         )
 
         try:
+            self.root.after(0, lambda: self._set_progress("Đang đăng nhập...", 5))
             connector.login(connection_details["email_address"], connection_details["password"])
+            
+            self.root.after(0, lambda: self._set_progress("Đang tìm kiếm emails...", 10))
             filter_instance = EmailFilter(connector)
-            records = filter_instance.search(criteria)
+            self.filter_instance = filter_instance
+            
+            # Create a custom search method that updates progress
+            records = self._search_with_progress(filter_instance, criteria)
+            
+        except FilterCancelled as exc:
+            logging.info("Search cancelled by user: %s", exc)
+            connector.logout()
+            self.root.after(0, lambda msg=str(exc): self._on_search_cancelled(msg))
+            return
         except Exception as exc:  # noqa: BLE001
             logging.exception("Lỗi khi lọc email: %s", exc)
             connector.logout()
@@ -371,6 +413,82 @@ class EmailFilterApp:
             0,
             lambda: self._on_search_success(connector, records, filter_state),
         )
+    
+    def _search_with_progress(self, filter_instance: EmailFilter, criteria: EmailFilterCriteria) -> List[EmailRecord]:
+        """Wrapper around search that provides progress updates."""
+        # Monkey-patch the search method to capture progress
+        original_search = filter_instance.search
+        
+        def search_wrapper(crit, limit=None, batch_size=100):
+            # Get UIDs first
+            imap_criteria = filter_instance._build_imap_criteria(crit)
+            uids = filter_instance.connector.search(imap_criteria)
+            total = len(uids)
+            
+            if limit:
+                uids = uids[:limit]
+                total = min(total, limit)
+            
+            self.root.after(0, lambda: self._set_progress(f"Tìm thấy {total} emails, đang xử lý...", 15))
+            
+            # Override the internal loop to report progress
+            records = []
+            filter_instance._cancelled = False
+            
+            for i in range(0, len(uids), batch_size):
+                if filter_instance._cancelled:
+                    raise FilterCancelled(f"Đã hủy! Đã xử lý {i}/{total} emails, tìm thấy {len(records)} kết quả.")
+                
+                batch_uids = uids[i:i + batch_size]
+                progress = 15 + int((i / total) * 80)  # 15% to 95%
+                batch_num = i // batch_size + 1
+                total_batches = (total + batch_size - 1) // batch_size
+                
+                msg = f"Đang xử lý: {i + 1}-{min(i + batch_size, total)}/{total} emails | Batch {batch_num}/{total_batches} | Tìm thấy: {len(records)}"
+                self.root.after(0, lambda m=msg, p=progress: self._set_progress(m, p))
+                
+                # Use original logic
+                if crit.body_keywords:
+                    fetch_parts = ["ENVELOPE", "BODY[]", "FLAGS", "BODYSTRUCTURE"]
+                else:
+                    fetch_parts = ["ENVELOPE", "BODY.PEEK[TEXT]<0.500>", "FLAGS", "BODYSTRUCTURE"]
+                
+                try:
+                    fetch_map = filter_instance.connector.fetch(batch_uids, fetch_parts)
+                except KeyboardInterrupt:
+                    filter_instance._cancelled = True
+                    raise FilterCancelled(f"Đã hủy! Đã xử lý {i}/{total} emails, tìm thấy {len(records)} kết quả.")
+                
+                for uid, message_parts in fetch_map.items():
+                    if filter_instance._cancelled:
+                        raise FilterCancelled(f"Đã hủy! Đã xử lý {i + len(fetch_map)}/{total} emails, tìm thấy {len(records)} kết quả.")
+                    
+                    try:
+                        import email
+                        if b"BODY[]" in message_parts:
+                            msg = email.message_from_bytes(message_parts[b"BODY[]"])
+                        else:
+                            msg = filter_instance._build_message_from_envelope(message_parts)
+                        
+                        has_attachments = filter_instance._has_attachments_from_structure(message_parts.get(b"BODYSTRUCTURE"))
+                        
+                        if not filter_instance._matches_subject(crit, msg):
+                            continue
+                        if not filter_instance._matches_body(crit, msg):
+                            continue
+                        if not filter_instance._matches_attachment(crit, has_attachments):
+                            continue
+                        record = filter_instance._build_record(uid, msg, has_attachments)
+                        if not filter_instance._matches_from(crit, record.from_address):
+                            continue
+                        records.append(record)
+                    except Exception as exc:
+                        logging.exception("Failed to parse message UID %s: %s", uid, exc)
+            
+            self.root.after(0, lambda: self._set_progress(f"✓ Hoàn thành! Tìm thấy {len(records)}/{total} kết quả phù hợp.", 100))
+            return records
+        
+        return search_wrapper(criteria)
 
     def _on_search_success(self, connector: IMAPConnector, records: List[EmailRecord], filter_state: dict) -> None:
         if self.connector:
@@ -382,6 +500,7 @@ class EmailFilterApp:
         self.connector = connector
         self.records = records
         self.filter_state = filter_state
+        self.is_searching = False
 
         self._populate_results_table(records)
         self._populate_recipients(records)
@@ -392,13 +511,30 @@ class EmailFilterApp:
         else:
             self._set_status("Không tìm thấy email phù hợp.")
         self.search_button.configure(state="normal")
+        self.cancel_button.configure(state="disabled")
         self.search_thread = None
+        self.filter_instance = None
 
     def _on_search_failed(self, error: Exception) -> None:
+        self.is_searching = False
         self._set_status("Lỗi khi lọc email.")
+        self._set_progress("", 0)
         messagebox.showerror("Lỗi", f"Không thể lọc email:\n{error}")
         self.search_button.configure(state="normal")
+        self.cancel_button.configure(state="disabled")
         self.search_thread = None
+        self.filter_instance = None
+    
+    def _on_search_cancelled(self, message: str) -> None:
+        """Handle cancelled search operation."""
+        self.is_searching = False
+        self._set_status("Đã hủy tìm kiếm.")
+        self._set_progress(message, 0)
+        messagebox.showinfo("Đã hủy", message)
+        self.search_button.configure(state="normal")
+        self.cancel_button.configure(state="disabled")
+        self.search_thread = None
+        self.filter_instance = None
 
     def _apply_actions(self) -> None:
         if not self.records:
@@ -572,6 +708,11 @@ class EmailFilterApp:
     def _set_status(self, message: str) -> None:
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.status_var.set(f"[{timestamp}] {message}")
+    
+    def _set_progress(self, message: str, percentage: int) -> None:
+        """Update progress bar and message."""
+        self.progress_var.set(message)
+        self.progress_bar["value"] = percentage
 
     def _prompt_text(self, message: str) -> Optional[str]:
         dialog = tk.Toplevel(self.root)

@@ -44,6 +44,9 @@ class IMAPConnector:
         self._client = IMAPClient(
             host=self.config.server, port=self.config.port, ssl=self.config.use_ssl
         )
+        # Set UTF-8 encoding to support Unicode characters in credentials and search
+        if hasattr(self._client, '_imap') and hasattr(self._client._imap, '_encoding'):
+            self._client._imap._encoding = 'utf-8'
 
     def login(self, username: str, secret: str) -> None:
         if self._client is None:
@@ -89,9 +92,21 @@ class IMAPConnector:
 
     def search(self, criteria: Sequence[str]) -> List[int]:
         logger.debug("Running IMAP search with criteria: %s", criteria)
-        uids = self.client.search(criteria)
-        logger.info("Search returned %d UIDs", len(uids))
-        return uids
+        # Try UTF-8 first for better Unicode support, but catch specific errors
+        try:
+            uids = self.client.search(criteria, charset='UTF-8')
+            logger.info("Search returned %d UIDs", len(uids))
+            return uids
+        except (UnicodeEncodeError, TypeError) as e:
+            # UTF-8 failed, try without charset (ASCII)
+            logger.warning("UTF-8 search failed (%s), using default charset", type(e).__name__)
+            try:
+                uids = self.client.search(criteria)
+                logger.info("Search returned %d UIDs", len(uids))
+                return uids
+            except Exception as e:
+                logger.error("Search failed: %s", e)
+                raise
 
     def fetch(self, uids: Iterable[int], fetch_parts: Sequence[str]) -> dict:
         uid_list = list(uids)
