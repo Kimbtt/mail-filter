@@ -260,7 +260,9 @@ def gather_connection_details(template: Optional[dict]) -> dict:
         default=(defaults["auth_mechanism"] or "LOGIN").upper(),
     )
     email_address = input_with_default("Địa chỉ email", defaults["email_address"], required=True)
-    password = input_password("Mật khẩu / OAuth token")
+    password = template.get("password", "") if template else ""
+    if not password:
+        password = input_password("Mật khẩu / OAuth token")
 
     return {
         "server": server,
@@ -276,6 +278,7 @@ def gather_connection_details(template: Optional[dict]) -> dict:
 def gather_filter_criteria(template: Optional[dict]) -> tuple[EmailFilterCriteria, dict]:
     """Prompt user for filtering options."""
     print("\n--- Điều kiện lọc ---")
+    today = datetime.now().strftime("%Y-%m-%d")
     subject_keywords_raw = input_with_default(
         "Từ khóa tiêu đề (phân cách bởi dấu phẩy)",
         template.get("subject_keywords", "") if template else "",
@@ -320,7 +323,7 @@ def gather_filter_criteria(template: Optional[dict]) -> tuple[EmailFilterCriteri
 
     from_date_input = input_with_default(
         "Ngày bắt đầu (YYYY-MM-DD hoặc dd/mm/YYYY, để trống nếu không dùng)",
-        template.get("from_date") if template else "",
+        template.get("from_date", today) if template else today,
     )
     to_date_input = input_with_default(
         "Ngày kết thúc (YYYY-MM-DD hoặc dd/mm/YYYY, để trống nếu không dùng)",
@@ -376,12 +379,12 @@ def display_results(records) -> None:
 
 
 def maybe_save_template(template_data: dict) -> None:
-    """Offer to save the current filter configuration."""
-    if not input_bool("Lưu bộ lọc thành mẫu để sử dụng sau?", default=False):
+    """Offer to save the current IMAP account settings."""
+    if not input_bool("Lưu tài khoản IMAP thành mẫu để sử dụng sau?", default=False):
         return
     name = input_with_default("Tên mẫu", required=True)
     save_template(name, template_data)
-    print(f"Đã lưu mẫu '{name}'.")
+    print(f"Đã lưu tài khoản '{name}'.")
 
 
 def main() -> None:
@@ -443,14 +446,7 @@ def main() -> None:
                 "folder": connection_data["folder"],
                 "auth_mechanism": connection_data["auth_mechanism"],
                 "email_address": connection_data["email_address"],
-                "subject_keywords": filter_state["subject_keywords"],
-                "body_keywords": filter_state["body_keywords"],
-                "from_keywords": filter_state["from_keywords"],
-                "from_domains": filter_state["from_domains"],
-                "keyword_operator": filter_state["keyword_operator"],
-                "attachment_choice": filter_state["attachment_choice"],
-                "from_date": filter_state["from_date"],
-                "to_date": filter_state["to_date"],
+                "password": connection_data["password"],
             }
             maybe_save_template(template_snapshot)
     except FilterCancelled as exc:

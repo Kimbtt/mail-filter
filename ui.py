@@ -58,6 +58,7 @@ class EmailFilterApp:
     # UI initialisation                                                  #
     # ------------------------------------------------------------------ #
     def _init_variables(self) -> None:
+        today = datetime.now().strftime("%Y-%m-%d")
         self.template_var = tk.StringVar(value="Tự nhập")
         self.server_var = tk.StringVar(value=self._env_default("IMAP_SERVER", "imap.gmail.com"))
         self.port_var = tk.StringVar(value=self._env_default("IMAP_PORT", "993"))
@@ -73,7 +74,7 @@ class EmailFilterApp:
         self.from_domains_var = tk.StringVar()
         self.operator_var = tk.StringVar(value="AND")
         self.attachment_var = tk.StringVar(value=self.ATTACHMENT_OPTIONS[0])
-        self.from_date_var = tk.StringVar()
+        self.from_date_var = tk.StringVar(value=today)
         self.to_date_var = tk.StringVar()
 
         self.mark_read_var = tk.BooleanVar(value=False)
@@ -102,7 +103,7 @@ class EmailFilterApp:
         status_bar.pack(fill=tk.X, padx=12, pady=(0, 8))
 
     def _build_template_frame(self, parent: ttk.Frame) -> None:
-        frame = ttk.LabelFrame(parent, text="Mẫu bộ lọc")
+        frame = ttk.LabelFrame(parent, text="Mẫu tài khoản")
         frame.pack(fill=tk.X, pady=(0, 10))
 
         ttk.Label(frame, text="Chọn mẫu:").grid(row=0, column=0, padx=8, pady=6, sticky="w")
@@ -114,7 +115,7 @@ class EmailFilterApp:
         apply_btn = ttk.Button(frame, text="Áp dụng", command=self._apply_template)
         apply_btn.grid(row=0, column=2, padx=8, pady=6)
 
-        save_btn = ttk.Button(frame, text="Lưu mẫu hiện tại", command=self._save_template_dialog)
+        save_btn = ttk.Button(frame, text="Lưu tài khoản hiện tại", command=self._save_template_dialog)
         save_btn.grid(row=0, column=3, padx=8, pady=6)
 
         frame.columnconfigure(1, weight=1)
@@ -148,13 +149,16 @@ class EmailFilterApp:
             row=0, column=4, padx=8, pady=4, sticky="w"
         )
 
-        search_btn = ttk.Button(frame, text="Lọc email", command=self._on_search_clicked)
-        search_btn.grid(row=3, column=3, padx=8, pady=8, sticky="e")
-        self.search_button = search_btn
-        
-        cancel_btn = ttk.Button(frame, text="Hủy", command=self._on_cancel_clicked, state="disabled")
-        cancel_btn.grid(row=3, column=2, padx=8, pady=8, sticky="e")
+        button_frame = ttk.Frame(frame)
+        button_frame.grid(row=3, column=2, columnspan=2, padx=8, pady=8, sticky="e")
+
+        cancel_btn = ttk.Button(button_frame, text="Hủy", command=self._on_cancel_clicked, state="disabled")
+        cancel_btn.pack(side=tk.RIGHT)
         self.cancel_button = cancel_btn
+
+        search_btn = ttk.Button(button_frame, text="Lọc email", command=self._on_search_clicked)
+        search_btn.pack(side=tk.RIGHT, padx=(8, 0))
+        self.search_button = search_btn
 
         frame.columnconfigure(1, weight=1)
         frame.columnconfigure(3, weight=1)
@@ -231,10 +235,11 @@ class EmailFilterApp:
         )
 
         action_btn = ttk.Button(frame, text="Áp dụng hành động", command=self._apply_actions)
-        action_btn.grid(row=0, column=3, rowspan=2, padx=8, pady=4, sticky="e")
+        action_btn.grid(row=1, column=4, padx=10, pady=4, sticky="e")
 
         frame.columnconfigure(1, weight=1)
         frame.columnconfigure(3, weight=1)
+        frame.columnconfigure(4, weight=0)
 
     def _build_results_frame(self, parent: ttk.Frame) -> None:
         frame = ttk.LabelFrame(parent, text="Kết quả lọc")
@@ -310,21 +315,10 @@ class EmailFilterApp:
         self.folder_var.set(template.get("folder", self.folder_var.get()))
         self.auth_var.set(template.get("auth_mechanism", self.auth_var.get()).upper())
         self.email_var.set(template.get("email_address", self.email_var.get()))
-
-        self.subject_var.set(template.get("subject_keywords", ""))
-        self.body_var.set(template.get("body_keywords", ""))
-        self.from_keywords_var.set(template.get("from_keywords", ""))
-        self.from_domains_var.set(template.get("from_domains", ""))
-        self.operator_var.set(template.get("keyword_operator", "AND"))
-        self.attachment_var.set(template.get("attachment_choice", "Bất kỳ"))
-        self.from_date_var.set(template.get("from_date") or "")
-        self.to_date_var.set(template.get("to_date") or "")
+        self.password_var.set(template.get("password", ""))
 
     def _save_template_dialog(self) -> None:
-        if not self.filter_state:
-            messagebox.showinfo("Thông báo", "Hãy chạy lọc ít nhất một lần trước khi lưu mẫu.")
-            return
-        name = self._prompt_text("Nhập tên mẫu")
+        name = self._prompt_text("Nhập tên mẫu tài khoản")
         if not name:
             return
         payload = {
@@ -334,12 +328,12 @@ class EmailFilterApp:
             "folder": self.folder_var.get().strip() or "INBOX",
             "auth_mechanism": self.auth_var.get().upper(),
             "email_address": self.email_var.get().strip(),
-            **self.filter_state,
+            "password": self.password_var.get(),
         }
         save_template(name, payload)
         self.templates = load_templates()
         self.template_combo["values"] = ["Tự nhập"] + sorted(self.templates.keys())
-        messagebox.showinfo("Thành công", f"Đã lưu mẫu '{name}'.")
+        messagebox.showinfo("Thành công", f"Đã lưu tài khoản '{name}'.")
 
     def _on_search_clicked(self) -> None:
         if self.search_thread and self.search_thread.is_alive():
